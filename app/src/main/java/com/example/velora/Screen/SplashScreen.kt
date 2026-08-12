@@ -1,10 +1,5 @@
 package com.example.velora.Screen
 
-import android.annotation.SuppressLint
-import android.app.Activity
-import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -28,58 +23,40 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.velora.R
-import com.google.firebase.auth.FirebaseAuth // Firebase Auth import
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun SplashScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToHome: () -> Unit
 ) {
-    val context = LocalContext.current as Activity
-
-    // Fix: Status bar icons ko dark/light background ke mutabiq visible rakhne ke liye EdgeToEdge configure karein
-    DisposableEffect(Unit) {
-        (context as? ComponentActivity)?.enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(
-                android.graphics.Color.TRANSPARENT
-            )
-        )
-        onDispose {}
-    }
-
     var startAnimation by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = true) {
         startAnimation = true
-        delay(3000) // 3 seconds professional delay
+        delay(3000) // 3 seconds delay
 
-        // Firebase session/user check
         val currentUser = FirebaseAuth.getInstance().currentUser
 
         if (currentUser != null) {
-            // Agar user already logged in hai toh direct Home par bhejein
             onNavigateToHome()
         } else {
-            // Agar user logged in nahi hai toh Login screen par bhejein
             onNavigateToLogin()
         }
     }
 
-    // Ultra-Premium Deep Space Gradient Background
     val backgroundBrush = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF020617), // Pitch Dark Obsidian
-            Color(0xFF0F172A), // Deep Slate Navy
-            Color(0xFF1E3A8A)  // Rich Royal Blue Accent
+            Color(0xFF020617),
+            Color(0xFF0F172A),
+            Color(0xFF1E3A8A)
         )
     )
 
@@ -89,7 +66,6 @@ fun SplashScreen(
             .background(brush = backgroundBrush),
         contentAlignment = Alignment.Center
     ) {
-        // Multi-layered Glowing Background Elements for Deep Aesthetic Depth
         Box(
             modifier = Modifier
                 .size(260.dp)
@@ -109,7 +85,6 @@ fun SplashScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(24.dp)
         ) {
-            // 1. Ultra-Modern Logo Container with Soft Rounded Corners & Glowing Border
             AnimatedVisibility(
                 visible = startAnimation,
                 enter = scaleIn(
@@ -153,7 +128,6 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.height(36.dp))
 
-            // 2. High-End App Name Typography
             AnimatedVisibility(
                 visible = startAnimation,
                 enter = slideInVertically(
@@ -172,7 +146,6 @@ fun SplashScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 3. Sleek Subtitle Tagline
             AnimatedVisibility(
                 visible = startAnimation,
                 enter = fadeIn(animationSpec = tween(1000, delayMillis = 400))
@@ -188,7 +161,6 @@ fun SplashScreen(
             }
         }
 
-        // 4. Bottom Modern Loading & Status Indicator
         Box(
             modifier = Modifier
                 .fillMaxSize()

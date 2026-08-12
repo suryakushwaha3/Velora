@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "1.9.0"
     id("com.google.gms.google-services")
+//room database
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -43,6 +45,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.games.activity)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation("androidx.compose.material:material-icons-extended")
 
@@ -68,13 +71,42 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.ktor:ktor-client-android:3.0.0")
 
-    // --- Firebase (Single Clean BoM Setup) ---
+    // --- Firebase (Managed automatically via BoM) ---
     implementation(platform("com.google.firebase:firebase-bom:33.10.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-database") // <-- Realtime database (version ki zaroorat nahi hai)
+    implementation("com.google.firebase:firebase-database-ktx") // <-- KTX extension without version
 
     // --- Emoji Picker ---
     implementation("androidx.emoji2:emoji2-emojipicker:1.5.0")
+
+    implementation("com.google.firebase:firebase-messaging:23.4.1")
+
+
+    //server setup
+    implementation("io.socket:socket.io-client:2.1.0")
+
+    implementation("io.socket:socket.io-client:2.1.0") {
+        exclude(group = "org.json", module = "json")
+    }
+
+//room database
+    val roomVersion = "2.8.4"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // firbase
+
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
 }

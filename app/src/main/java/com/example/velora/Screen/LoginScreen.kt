@@ -1,11 +1,6 @@
 package com.example.velora.Screen
 
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -32,23 +27,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.velora.AuthManager.AuthManager
 
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onNavigateToSignUp: () -> Unit,
     onNavigateToForgotPassword: () -> Unit
 ) {
-    val context = LocalContext.current as Activity
-
-    DisposableEffect(Unit) {
-        (context as? ComponentActivity)?.enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(
-                android.graphics.Color.TRANSPARENT
-            )
-        )
-        onDispose {}
-    }
+    val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -174,7 +159,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "Enter your email to dive back into your secure conversations instantly.",
+                        text = "Enter your Email to dive back into your secure conversations.",
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center,
@@ -260,9 +245,8 @@ fun LoginScreen(
 
                             isLoading = true
 
-                            // ⚡ Fast Login: Firestore call ko login block se hata diya gaya hai taaki UI instant load ho
                             AuthManager.loginUser(
-                                email = email,
+                                identifier = email,
                                 password = password,
                                 onSuccess = {
                                     isLoading = false
@@ -313,7 +297,7 @@ fun LoginScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(10.dp)) // Note: Ensure standard Modifier.height(10.dp) if typo fixed
 
                     TextButton(onClick = onNavigateToSignUp) {
                         Text(

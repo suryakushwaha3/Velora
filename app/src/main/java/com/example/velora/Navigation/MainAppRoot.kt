@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.DonutLarge
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,22 +26,21 @@ fun MainAppRoot(onLogout: () -> Unit) {
         bottomBar = {
             VeloraBottomBar(
                 selectedTab = when (currentRoute) {
-                    Screen.Home.route -> 0
-                    Screen.Status.route -> 1
-                    Screen.Calls.route -> 2
-                    Screen.Settings.route -> 3
+                    AppScreen.Home.route -> 0
+                    AppScreen.Status.route -> 1
+                    AppScreen.Calls.route -> 2
+                    AppScreen.Profile.route -> 3
                     else -> 0
                 },
                 onTabSelected = { index ->
                     val targetRoute = when (index) {
-                        0 -> Screen.Home.route
-                        1 -> Screen.Status.route
-                        2 -> Screen.Calls.route
-                        3 -> Screen.Settings.route
-                        else -> Screen.Home.route
+                        0 -> AppScreen.Home.route
+                        1 -> AppScreen.Status.route
+                        2 -> AppScreen.Calls.route
+                        3 -> AppScreen.Profile.route
+                        else -> AppScreen.Home.route
                     }
                     navController.navigate(targetRoute) {
-                        // Backstack ko safely manage karne ke liye latest findStartDestination use kiya gaya hai
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
@@ -50,10 +49,10 @@ fun MainAppRoot(onLogout: () -> Unit) {
                     }
                 },
                 items = listOf(
-                    BottomBarItem("Chats", Icons.Default.ChatBubble, 3),
+                    BottomBarItem("Chats", Icons.Default.ChatBubble, 0),
                     BottomBarItem("Status", Icons.Default.DonutLarge, 0),
                     BottomBarItem("Calls", Icons.Default.Call, 0),
-                    BottomBarItem("Settings", Icons.Default.Settings, 0)
+                    BottomBarItem("Profile", Icons.Default.Person, 0)
                 )
             )
         }

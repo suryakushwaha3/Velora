@@ -1,137 +1,232 @@
 package com.example.velora.AuthManager
 
+import com.example.velora.Model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.serialization.Serializable
-
-@Serializable
-data class UserProfile(
-    val email: String,
-    val name: String? = null,
-    val phoneNumber: String? = null
-)
+import com.google.firebase.database.FirebaseDatabase
 
 object AuthManager {
+    private val auth = FirebaseAuth.getInstance()
+    private val database = FirebaseDatabase.getInstance().getReference("users")
 
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
-    private val firestore: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
-
-    // 1. Fast Login with Firebase Authentication
-    fun loginUser(
-        email: String,
-        password: String,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
-    ) {
-        if (email.isBlank() || !email.contains("@")) {
-            onError("Please enter a valid email address")
-            return
-        }
-        if (password.length < 6) {
-            onError("Password must be at least 6 characters")
-            return
-        }
-
-        val cleanEmail = email.trim()
-
-        auth.signInWithEmailAndPassword(cleanEmail, password)
-            .addOnSuccessListener {
-                onSuccess()
-            }
-            .addOnFailureListener {
-                onError("Invalid email or password")
-            }
+    fun getCurrentUserId(): String {
+        return auth.currentUser?.uid ?: ""
     }
 
-    // 2. Fetch User Phone Number from Firestore after Login
-    fun getUserPhoneNumber(onResult: (String?) -> Unit) {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            firestore.collection("users").document(currentUser.uid)
-                .get()
-                .addOnSuccessListener { document ->
-                    val phoneNumber = document.getString("phoneNumber")
-                    onResult(phoneNumber)
-                }
-                .addOnFailureListener {
-                    onResult(null)
-                }
-        } else {
-            onResult(null)
-        }
-    }
-
-    // 3. Fast Sign Up User (Optimized to respond instantly)
+    // 1. SignUp User using UserProfile Data Class
     fun signUpUser(
         email: String,
         password: String,
-        userName: String? = null,
-        phoneNumber: String? = null,
+        userName: String,
+        usernameId: String,
+        phone: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        if (email.isBlank() || !email.contains("@")) {
-            onError("Please enter a valid email address")
+        val cleanUsernameId = usernameId.trim()
+
+        if (cleanUsernameId.isBlank()) {
+            onError("Username ID cannot be empty.")
             return
         }
-        if (password.length < 6) {
-            onError("Password must be at least 6 characters")
-            return
-        }
 
-        val cleanEmail = email.trim()
-        val cleanName = userName?.trim()
-        val cleanPhone = phoneNumber?.trim()
+        database.orderByChild("username").equalTo(cleanUsernameId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.exists()) {
+                    onError("This Username ID is already taken. Choose another.")
+                } else {
+                    auth.createUserWithEmailAndPassword(email, password)
+                        .addOnSuccessListener { authResult ->
+                            val userId = authResult.user?.uid ?: run {
+                                onError("Failed to retrieve user ID.")
+                                return@addOnSuccessListener
+                            }
 
-        auth.createUserWithEmailAndPassword(cleanEmail, password)
-            .addOnSuccessListener { authResult ->
-                val userId = authResult.user?.uid ?: cleanEmail
+                            val userProfile = UserProfile(
+                                email = email,
+                                name = userName,
+                                photoUri = "", // Default empty image
+                                username = cleanUsernameId,
+                                phone = phone
+                            )
 
-                val userProfile = UserProfile(
-                    email = cleanEmail,
-                    name = cleanName,
-                    phoneNumber = cleanPhone
-                )
-
-                // 🚀 Speed Optimization: Turant onSuccess call karein taaki UI fast load ho,
-                // aur Firestore mein data background mein silent save ho jaye.
-                onSuccess()
-
-                firestore.collection("users").document(userId)
-                    .set(userProfile)
-                    .addOnFailureListener { e ->
-                        // Background failure handling agar zaroorat ho
-                    }
+                            database.child(userId).setValue(userProfile)
+                                .addOnSuccessListener { onSuccess() }
+                                .addOnFailureListener { dbError ->
+                                    onError(dbError.localizedMessage ?: "Failed to save user data")
+                                }
+                        }
+                        .addOnFailureListener { authError ->
+                            onError(authError.localizedMessage ?: "Registration Failed")
+                        }
+                }
             }
             .addOnFailureListener { e ->
-                val errorMessage = if (e.message?.contains("email-already-in-use", ignoreCase = true) == true) {
-                    "This email is already registered. Please login instead."
-                } else {
-                    "Sign Up Error: ${e.localizedMessage ?: "Registration failed"}"
-                }
-                onError(errorMessage)
+                onError(e.localizedMessage ?: "Database error occurred")
             }
     }
 
-    // 4. Forgot Password
+    // 2. Login User (Supports Email or Username)
+    fun loginUser(
+        identifier: String,
+        password: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        if (identifier.contains("@")) {
+            auth.signInWithEmailAndPassword(identifier, password)
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { onError(it.localizedMessage ?: "Login Failed") }
+        } else {
+            database.orderByChild("username").equalTo(identifier.trim())
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    if (snapshot.exists()) {
+                        for (child in snapshot.children) {
+                            val email = child.child("email").getValue(String::class.java)
+                            if (email != null) {
+                                auth.signInWithEmailAndPassword(email, password)
+                                    .addOnSuccessListener { onSuccess() }
+                                    .addOnFailureListener { onError(it.localizedMessage ?: "Login Failed") }
+                                return@addOnSuccessListener
+                            }
+                        }
+                        onError("User profile found, but email is missing.")
+                    } else {
+                        onError("Username ID not found!")
+                    }
+                }
+                .addOnFailureListener { exception ->
+                    onError(exception.localizedMessage ?: "Database error occurred")
+                }
+        }
+    }
+
+    // 3. Search Users by Username for Real-time Chat
+    fun searchUsersByUsername(
+        query: String,
+        onSuccess: (List<UserProfile>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        if (query.isBlank()) {
+            onSuccess(emptyList())
+            return
+        }
+
+        database.orderByChild("username")
+            .startAt(query.trim())
+            .endAt(query.trim() + "\uf8ff")
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val userList = mutableListOf<UserProfile>()
+                for (child in snapshot.children) {
+                    val userProfile = child.getValue(UserProfile::class.java)
+                    if (userProfile != null) {
+                        userList.add(userProfile)
+                    }
+                }
+                onSuccess(userList)
+            }
+            .addOnFailureListener { exception ->
+                onError(exception.localizedMessage ?: "Failed to search users")
+            }
+    }
+
+    // 4. Fetch Current User Profile with Auto-Creation & Manual Fallback
+    fun getUserProfile(
+        onSuccess: (UserProfile) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val userId = getCurrentUserId()
+        if (userId.isBlank()) {
+            onError("User not logged in")
+            return
+        }
+
+        database.child(userId).get()
+            .addOnSuccessListener { snapshot ->
+                if (snapshot.exists()) {
+                    try {
+                        val userProfile = snapshot.getValue(UserProfile::class.java)
+                        if (userProfile != null) {
+                            onSuccess(userProfile)
+                        } else {
+                            fetchManually(snapshot, onSuccess)
+                        }
+                    } catch (e: Exception) {
+                        fetchManually(snapshot, onSuccess)
+                    }
+                } else {
+                    // Auto-create default profile if missing in database
+                    val currentUser = FirebaseAuth.getInstance().currentUser
+                    val defaultProfile = UserProfile(
+                        email = currentUser?.email ?: "",
+                        name = currentUser?.displayName ?: "Velora User",
+                        photoUri = "",
+                        username = "user_${userId.take(6)}",
+                        phone = currentUser?.phoneNumber ?: ""
+                    )
+
+                    database.child(userId).setValue(defaultProfile)
+                        .addOnSuccessListener { onSuccess(defaultProfile) }
+                        .addOnFailureListener { onSuccess(defaultProfile) }
+                }
+            }
+            .addOnFailureListener { exception ->
+                onError(exception.localizedMessage ?: "Failed to fetch profile")
+            }
+    }
+
+    // Helper for manual snapshot mapping if automatic deserialization fails
+    private fun fetchManually(
+        snapshot: com.google.firebase.database.DataSnapshot,
+        onSuccess: (UserProfile) -> Unit
+    ) {
+        val email = snapshot.child("email").getValue(String::class.java) ?: ""
+        val name = snapshot.child("name").getValue(String::class.java)
+        val photoUri = snapshot.child("photoUri").getValue(String::class.java)
+        val username = snapshot.child("username").getValue(String::class.java)
+        val phone = snapshot.child("phone").getValue(String::class.java)
+
+        val manualProfile = UserProfile(
+            email = email,
+            name = name,
+            photoUri = photoUri,
+            username = username,
+            phone = phone
+        )
+        onSuccess(manualProfile)
+    }
+
+    // 5. Save Profile Image as Base64 String directly in Realtime Database (`photoUri`)
+    fun updateProfileImage(
+        base64Image: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val userId = getCurrentUserId()
+        if (userId.isBlank()) {
+            onError("User not logged in")
+            return
+        }
+
+        database.child(userId).child("photoUri").setValue(base64Image)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { exception ->
+                onError(exception.localizedMessage ?: "Failed to update profile image")
+            }
+    }
+
+    // Password Reset
     fun resetPassword(
         email: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        if (email.isBlank() || !email.contains("@")) {
-            onError("Please enter a valid email address")
-            return
-        }
-
-        val cleanEmail = email.trim()
-
-        auth.sendPasswordResetEmail(cleanEmail)
-            .addOnSuccessListener {
-                onSuccess()
-            }
-            .addOnFailureListener {
-                onError("Invalid email or password")
+        FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { exception ->
+                onError(exception.localizedMessage ?: "Failed to send reset email")
             }
     }
 }

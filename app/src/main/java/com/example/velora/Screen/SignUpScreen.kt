@@ -1,11 +1,6 @@
 package com.example.velora.Screen
 
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -34,26 +29,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.velora.AuthManager.AuthManager
 
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun SignUpScreen(
     onSignUpSuccess: () -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
-    val context = LocalContext.current as Activity
-
-    DisposableEffect(Unit) {
-        (context as? ComponentActivity)?.enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(
-                android.graphics.Color.TRANSPARENT
-            )
-        )
-        onDispose {}
-    }
+    val context = LocalContext.current
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -190,7 +175,7 @@ fun SignUpScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Create your account and jump into the ultimate secure chat experience.",
+                        text = "Create your account and jump into the secure chat experience.",
                         fontSize = 12.sp,
                         color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center,
@@ -243,10 +228,10 @@ fun SignUpScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     OutlinedTextField(
-                        value = phoneNumber,
-                        onValueChange = { phoneNumber = it },
+                        value = phone,
+                        onValueChange = { phone = it },
                         label = { Text("Phone Number", color = Color(0xFF94A3B8)) },
-                        placeholder = { Text("+91 9876543210", color = Color(0xFF475569)) },
+                        placeholder = { Text("Enter your phone number", color = Color(0xFF475569)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                         modifier = Modifier.fillMaxWidth(),
@@ -290,53 +275,33 @@ fun SignUpScreen(
                     Button(
                         onClick = {
                             if (name.isBlank()) {
-                                Toast.makeText(
-                                    context,
-                                    "Please enter your full name",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(context, "Please enter your full name", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             if (email.isBlank() || !email.contains("@")) {
-                                Toast.makeText(
-                                    context,
-                                    "Please enter a valid email address",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(context, "Please enter a valid email address", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            if (phoneNumber.isBlank() || phoneNumber.length < 10) {
-                                Toast.makeText(
-                                    context,
-                                    "Please enter a valid phone number",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                            if (phone.length < 10) {
+                                Toast.makeText(context, "Please enter a valid phone number", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             if (password.length < 6) {
-                                Toast.makeText(
-                                    context,
-                                    "Password must be at least 6 characters",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                Toast.makeText(context, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
 
                             isLoading = true
 
-                            // ⚡ Fast SignUp: AuthManager turant onSuccess call karega, Firestore data background mein save hoga
                             AuthManager.signUpUser(
                                 email = email,
                                 password = password,
                                 userName = name,
-                                phoneNumber = phoneNumber,
+                                usernameId = email.substringBefore("@"),
+                                phone = phone,
                                 onSuccess = {
                                     isLoading = false
-                                    Toast.makeText(
-                                        context,
-                                        "Registration Successful! 🎉",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    Toast.makeText(context, "Registration Successful! 🎉", Toast.LENGTH_SHORT).show()
                                     onSignUpSuccess()
                                 },
                                 onError = { errorMsg ->

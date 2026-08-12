@@ -7,27 +7,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.example.velora.Model.UserProfile // 🔥 Imported UserProfile data class
 import com.example.velora.Screen.ChatScreen
+import com.example.velora.Screen.ContactListScreen
 import com.example.velora.Screen.HomeScreen
- import com.example.velora.components.StatusScreen
+import com.example.velora.Screen.ProfileDetailScreen
+import com.example.velora.Screen.ProfileScreen
+import com.example.velora.components.CallsScreen
+import com.example.velora.components.StatusScreen
 import java.net.URLDecoder
-import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-
-// Agar aapke paas Screen sealed class pehle se hai toh use update kar lein, ya ye routes use karein:
-sealed class Screen(val route: String) {
-    object Home : Screen("home")
-    object Status : Screen("status")
-    object Calls : Screen("calls")
-    object Settings : Screen("settings")
-    object Chat : Screen("chat/{contactName}/{contactNumber}") {
-        fun createRoute(contactName: String, contactNumber: String): String {
-            val encodedName = URLEncoder.encode(contactName, StandardCharsets.UTF_8.toString())
-            val encodedNumber = URLEncoder.encode(contactNumber, StandardCharsets.UTF_8.toString())
-            return "chat/$encodedName/$encodedNumber"
-        }
-    }
-}
 
 @Composable
 fun VeloraNavGraph(
@@ -37,35 +26,100 @@ fun VeloraNavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
+        startDestination = AppScreen.Home.route,
         modifier = modifier
     ) {
-        composable(Screen.Home.route) {
+        // 1. Home / Chats Route
+        composable(AppScreen.Home.route) {
             HomeScreen(
                 onLogout = onLogout,
+                onProfileClick = { name, phone ->
+                    navController.navigate(AppScreen.ProfileDetail.createRoute(name, phone))
+                },
                 onChatClick = { name, number ->
-                    // 🚀 Chat par tap hote hi NavController ke zariye ChatScreen par navigate karega
-                    val route = Screen.Chat.createRoute(name, number)
-                    navController.navigate(route)
+                    navController.navigate(AppScreen.Chat.createRoute(name, number))
+                },
+                onNewChatClick = {
+                    navController.navigate(AppScreen.ContactList.route)
                 }
             )
         }
 
-        composable(Screen.Status.route) {
+        // 2. Status Route
+        composable(AppScreen.Status.route) {
             StatusScreen()
         }
 
-        composable(Screen.Calls.route) {
-            // CallsScreen()
+        // 3. Calls Route
+        composable(AppScreen.Calls.route) {
+            CallsScreen()
         }
 
-        composable(Screen.Settings.route) {
-            // SettingsScreen()
+        // 4. Profile Route
+        composable(AppScreen.Profile.route) {
+            ProfileScreen(
+                onBackPress = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate("login_screen") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
 
-        // 🚀 Naya ChatScreen Route Destination with Arguments
+        // 5. WhatsApp Style Contact Profile Detail Route (Updated to use UserProfile)
         composable(
-            route = Screen.Chat.route,
+            route = AppScreen.ProfileDetail.route,
+            arguments = listOf(
+                navArgument("name") { type = NavType.StringType },
+                navArgument("phone") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val encodedName = backStackEntry.arguments?.getString("name") ?: ""
+            val encodedPhone = backStackEntry.arguments?.getString("phone") ?: ""
+
+            val decodedName = URLDecoder.decode(encodedName, StandardCharsets.UTF_8.toString())
+            val decodedPhone = URLDecoder.decode(encodedPhone, StandardCharsets.UTF_8.toString())
+
+            // 🔥 Creating UserProfile object from nav arguments to match ProfileDetailScreen signature
+            val userProfile = UserProfile(
+                email = "",
+                name = decodedName,
+                phone = decodedPhone,
+                photoUri = "",
+                username = ""
+            )
+
+            ProfileDetailScreen(
+                userProfile = userProfile, // 👈 Passed UserProfile object here
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // 6. Contact List Screen Route
+        composable(AppScreen.ContactList.route) {
+            ContactListScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onContactSelected = { name, number ->
+                    com.example.velora.viewModel.ChatManager.updateActiveChat(
+                        id = number,
+                        name = name,
+                        lastMessage = "Tap to chat",
+                        time = "Just now"
+                    )
+
+                    navController.navigate(AppScreen.Chat.createRoute(name, number)) {
+                        popUpTo(AppScreen.Home.route)
+                    }
+                }
+            )
+        }
+
+        // 7. Chat Screen Route with Arguments
+        composable(
+            route = AppScreen.Chat.route,
             arguments = listOf(
                 navArgument("contactName") { type = NavType.StringType },
                 navArgument("contactNumber") { type = NavType.StringType }
@@ -74,16 +128,10 @@ fun VeloraNavGraph(
             val encodedName = backStackEntry.arguments?.getString("contactName") ?: ""
             val encodedNumber = backStackEntry.arguments?.getString("contactNumber") ?: ""
 
-            // Decode special characters/spaces in names or numbers safely
-            val contactName = URLDecoder.decode(encodedName, StandardCharsets.UTF_8.toString())
-            val contactNumber = URLDecoder.decode(encodedNumber, StandardCharsets.UTF_8.toString())
-
             ChatScreen(
-                contactName = contactName,
-                contactNumber = contactNumber,
-                onBackPress = {
-                    navController.popBackStack() // Back button press par wapas home screen par jayega
-                }
+                contactName = URLDecoder.decode(encodedName, StandardCharsets.UTF_8.toString()),
+                contactNumber = URLDecoder.decode(encodedNumber, StandardCharsets.UTF_8.toString()),
+                onBackPress = { navController.popBackStack() }
             )
         }
     }

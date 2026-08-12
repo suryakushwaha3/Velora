@@ -1,7 +1,5 @@
 package com.example.velora.Screen
 
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -26,14 +24,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.velora.AuthManager.AuthManager // Firebase AuthManager import kiya gaya hai
+import com.example.velora.AuthManager.AuthManager
 
-@SuppressLint("ContextCastToActivity")
 @Composable
 fun ForgotPasswordScreen(
     onNavigateBackToLogin: () -> Unit
 ) {
-    val context = LocalContext.current as Activity
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -206,7 +203,7 @@ fun ForgotPasswordScreen(
 
                             isLoading = true
 
-                            // Firebase AuthManager ka resetPassword function call kiya gaya hai
+                            // Firebase AuthManager resetPassword call
                             AuthManager.resetPassword(
                                 email = email,
                                 onSuccess = {

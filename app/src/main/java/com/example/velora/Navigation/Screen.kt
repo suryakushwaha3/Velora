@@ -9,11 +9,21 @@ sealed class AppScreen(val route: String) {
     object SignUp : AppScreen("signup_screen")
     object ForgotPassword : AppScreen("forgot_password_screen")
     object Home : AppScreen("home_screen")
+    object Profile : AppScreen("profile_screen")
     object Status : AppScreen("status")
     object Calls : AppScreen("calls")
     object Settings : AppScreen("settings")
+    object ContactList : AppScreen("contact_list_screen")
 
-    // Dynamic Chat Route with arguments
+    // 🔥 WhatsApp Style Profile Detail Route with Helper Function
+    object ProfileDetail : AppScreen("profile_detail/{name}/{phone}") {
+        fun createRoute(name: String, phone: String): String {
+            val encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8.toString())
+            val encodedPhone = URLEncoder.encode(phone, StandardCharsets.UTF_8.toString())
+            return "profile_detail/$encodedName/$encodedPhone"
+        }
+    }
+
     object Chat : AppScreen("chat_screen/{contactName}/{contactNumber}") {
         fun createRoute(contactName: String, contactNumber: String): String {
             val encodedName = URLEncoder.encode(contactName, StandardCharsets.UTF_8.toString())

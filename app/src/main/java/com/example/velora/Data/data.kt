@@ -1,10 +1,11 @@
-package com.example.velora.Data
+package com.example.velora.Model
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class UserProfile(
-    val email: String,
-    val name: String? = null,
-    val mobile: String? = null
+    val email: String? = "",
+    val name: String? = "",
+    val photoUri: String? = "",
+    val username: String? = "",
+    val phone: String? = "",
+    val uid: String? = "",        // 🔥 Log warning fix karne ke liye add kiya gaya
+    val usernameId: String? = ""  // 🔥 Log warning fix karne ke liye add kiya gaya
 )
